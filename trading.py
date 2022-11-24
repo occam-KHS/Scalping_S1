@@ -352,10 +352,10 @@ def auto_trading():  # 매수 희망 종목 리스트
     print("===국내 주식 자동매매 프로그램을 시작합니다===")
 
     data_all = pd.DataFrame()
-    symbol_list = ['131400']
+    symbol_list = ['090410']
     # 자동매매 시작
     try:
-        buy_amount = 0
+
         while True:
 
             t_now = datetime.datetime.now()
@@ -384,6 +384,7 @@ def auto_trading():  # 매수 희망 종목 리스트
                 # 매수 코드
                 for sym in symbol_list:
 
+                    target_price = get_target_price(sym)  # 전날 종가, Get from Input dictionary
                     current_price, volume_rate = get_current_price(sym)
 
                     t_progress = ((t_now - t_9) / (t_exit - t_9)) * 100
@@ -420,8 +421,6 @@ def auto_trading():  # 매수 희망 종목 리스트
 
                     data_all = pd.concat([data_all, data], axis=0).tail(18)
 
-                    print(f'data_all 크기: {len(data_all)}')
-
                     if len(data_all) >= 18:
                         df = data_all.resample('3s').mean()  # Noise reduction
 
@@ -437,6 +436,7 @@ def auto_trading():  # 매수 희망 종목 리스트
                         df['c4'] = (df['tday_rltv'] > 110).astype('int')
 
                         decision = df.tail(1)[['c1', 'c2', 'c3', 'c4']].product(axis=1)[0]
+                        print(df.tail(1)['c1'].values[0], df.tail(1)['c2'].values[0], df.tail(1)['c3'].values[0], df.tail(1)['c4'].values[0])
                         print(decision, volume_check)
 
                         if decision == 1 & volume_check == 1:  # Max: 5% 상승 가격, Min: 전날 종가
@@ -444,8 +444,9 @@ def auto_trading():  # 매수 희망 종목 리스트
                             buy_qty = int(buy_amount // current_price)
                             if (buy_qty > 0):
 
-                                print(f"{sym} 목표가 달성({target_price} < {current_price}) 매수를 시도합니다.")
-                                buy_price = float(current_price) - ho(float(current_price))
+                                print(f"{sym} 매수를 시도합니다.")
+                                # buy_price = float(current_price) - ho(float(current_price))
+                                buy_price = float(current_price)
                                 print(sym, str(int(buy_qty)), str(int(buy_price)))
 
                                 result = buy(sym, str(int(buy_qty)), str(int(buy_price)))
@@ -464,10 +465,13 @@ def auto_trading():  # 매수 희망 종목 리스트
 
                             if float(qty_rt[2]) > 1.0 or float(qty_rt[2]) < -1.0:  # 익절 라인은 dynamic 하게 바꿀 수 있다 (단위 %)
 
-                                print(sym, str(qty_rt[1]), str(int(sell_price)))  # 매도 주문 인자 정보
+                                # print(sym, str(qty_rt[1]), str(int(sell_price)))  # 매도 주문 인자 정보
                                 if float(qty_rt[1]) != 0:
                                     # sell(sym, str(qty_rt[1]), str(int(sell_price)), "00") # "00 지정가 매도
                                     sell(sym, str(qty_rt[1]), "0", "01")  # "01 시장가 메도
+
+                    if t_now.minute % 30 == 0:  # 매 30분 마다 창 지움
+                        os.system('cls')
 
                     # PM 09:00 ~ PM 09:01: 관찰
                     if t_9 < t_now < t_start:
@@ -477,7 +481,6 @@ def auto_trading():  # 매수 희망 종목 리스트
                             sell(sym, str(qty_rt[1]), "0", "01")  # "01 전량 시장가 메도
 
                         time.sleep(1)
-
 
     except Exception as e:
         print(f"[오류 발생]{e}")
