@@ -392,7 +392,7 @@ def auto_trading():  # 매수 희망 종목 리스트
                     t_progress = ((t_now - t_9) / (t_exit - t_9)) * 100
                     volume_rate = float(volume_rate)
 
-                    volume_check = int((volume_rate / t_progress) > 1.6)
+                    volume_check = int((volume_rate / t_progress) > 2)
 
                     print(f'종목: {sym}, 현재가: {current_price}, 거래량지표: {float(volume_rate / t_progress):5.1f}')
 
@@ -486,6 +486,11 @@ def auto_trading():  # 매수 희망 종목 리스트
                             sell(sym, str(qty_rt[1]), "0", "01")  # "01 전량 시장가 메도
 
                         time.sleep(1)
+
+                    # PM 03:20 ~ :프로그램 종료
+                    if t_exit < t_now:
+                        print("프로그램을 종료합니다.")
+                        break
 
     except Exception as e:
         print(f"[오류 발생]{e}")
