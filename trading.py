@@ -3,7 +3,7 @@ import json
 import datetime
 import time
 import keyring
-
+import pandas as pd
 
 APP_KEY = keyring.get_password('real_app_key', 'occam123')
 APP_SECRET = keyring.get_password('real_app_secret', 'occam123')
@@ -39,7 +39,7 @@ def hashkey(datas):
     return hashkey
 
 
-def get_current_price(code="005930"): # 주식 현재가 시세
+def get_current_price(code="005930"):  # 주식 현재가 시세
     """현재가 조회"""
     PATH = "uapi/domestic-stock/v1/quotations/inquire-price"
     URL = f"{URL_BASE}/{PATH}"
@@ -53,7 +53,7 @@ def get_current_price(code="005930"): # 주식 현재가 시세
         "fid_input_iscd": code,
     }
     res = requests.get(URL, headers=headers, params=params)
-    return int(res.json()['output']['stck_prpr']), float(res.json()['output']['prdy_vrss_vol_rate']) #전일 대비 거래량 비율
+    return int(res.json()['output']['stck_prpr']), float(res.json()['output']['prdy_vrss_vol_rate'])  # 전일 대비 거래량 비율
     # Return: 주식 현재가, 전일 대비 거래량 비율
 
 
@@ -156,7 +156,8 @@ def get_stock_balance():
     print(f"====주식 보유잔고====")
     for stock in stock_list:
         if int(stock['hldg_qty']) > 0:
-            stock_dict[stock['pdno']] = [stock['hldg_qty'], stock['ord_psbl_qty'], stock['evlu_pfls_rt']]  # 0: 보유 수량, 1: 평가수익율
+            stock_dict[stock['pdno']] = [stock['hldg_qty'], stock['ord_psbl_qty'],
+                                         stock['evlu_pfls_rt']]  # 0: 보유 수량, 1: 평가수익율
             print(f"{stock['prdt_name']}({stock['pdno']}): {stock['hldg_qty']}주")
             time.sleep(0.1)
     print(f"주식 평가 금액: {evaluation[0]['scts_evlu_amt']}원")
@@ -211,7 +212,7 @@ def get_transactions(code="005930"):
     }
     res = requests.get(URL, headers=headers, params=params)
 
-    stck_cntg_hour = datetime.strptime(res.json()['output'][1]['stck_cntg_hour'], '%H%M%S').time()
+    stck_cntg_hour = datetime.datetime.strptime(res.json()['output'][1]['stck_cntg_hour'], '%H%M%S').time()
     stck_prpr = int(res.json()['output'][1]['stck_prpr'])  # 현재가
     prdy_vrss = int(res.json()['output'][1]['prdy_vrss'])  # 전일대비
     prdy_vrss_sign = int(res.json()['output'][1]['prdy_vrss_sign'])  # 전일대비
@@ -237,7 +238,7 @@ def get_orderbook(code="005930"):
     }
     res = requests.get(URL, headers=headers, params=params)
 
-    aspr_acpt_hour = datetime.strptime(res.json()['output1']['aspr_acpt_hour'], '%H%M%S').time()
+    aspr_acpt_hour = datetime.datetime.strptime(res.json()['output1']['aspr_acpt_hour'],'%H%M%S').time()
 
     askp_rsqn1 = int(res.json()['output1']['askp_rsqn1'])  # 매도호가 잔량1
     askp_rsqn2 = int(res.json()['output1']['askp_rsqn2'])  # 매도호가 잔량2
@@ -266,6 +267,7 @@ def get_orderbook(code="005930"):
 
     return aspr_acpt_hour, askp_rsqn1, askp_rsqn2, askp_rsqn3, askp_rsqn4, askp_rsqn5, askp_rsqn6, askp_rsqn7, askp_rsqn8, askp_rsqn9, askp_rsqn10, \
            bidp_rsqn1, bidp_rsqn2, bidp_rsqn3, bidp_rsqn4, bidp_rsqn5, bidp_rsqn6, bidp_rsqn7, bidp_rsqn8, bidp_rsqn9, bidp_rsqn10, antc_cnpr, antc_vol
+
 
 def buy(code="005930", qty="1", buy_price="0"):
     """주식 시장가 매수"""
@@ -346,13 +348,14 @@ def ho(x):
         return 1
 
 
-symbol_list = []
-
 def auto_trading():  # 매수 희망 종목 리스트
     print("===국내 주식 자동매매 프로그램을 시작합니다===")
+
+    data_all = pd.DataFrame()
+    symbol_list = ['131400']
     # 자동매매 시작
     try:
-        # flag = 0
+        buy_amount = 0
         while True:
 
             t_now = datetime.datetime.now()
@@ -365,6 +368,7 @@ def auto_trading():  # 매수 희망 종목 리스트
             if today == 5 or today == 6:  # 토요일이나 일요일이면 자동 종료
                 print("주말이므로 프로그램을 종료합니다.")
                 break
+
 
             if t_start < t_now <= t_sell:  # AM 09:00 ~ PM 15:15
 
@@ -382,95 +386,100 @@ def auto_trading():  # 매수 희망 종목 리스트
 
                     current_price, volume_rate = get_current_price(sym)
 
-                    t_progress = ((t_now - t_9) / (t_exit - t_9))*100
+                    t_progress = ((t_now - t_9) / (t_exit - t_9)) * 100
                     volume_rate = float(volume_rate)
 
-                    volume_check = int((volume_rate/t_progress) > 1.6)
+                    volume_check = int((volume_rate / t_progress) > 1.6)
 
                     print(f'전일 대비 거래량 비율: {volume_rate:4.1f}')
-                    print(f'종목: {sym}, 현재가: {current_price}, 전일종가: {target_price}, 거래량지표: {float(volume_rate / t_progress):5.1f}')
+                    print(f'종목: {sym}, 현재가: {current_price}, 거래량지표: {float(volume_rate / t_progress):5.1f}')
 
                     time.sleep(1)
 
-                    aspr_acpt_hour, askp_rsqn1, askp_rsqn2, askp_rsqn3, askp_rsqn4, askp_rsqn5, askp_rsqn6, askp_rsqn7, askp_rsqn8, askp_rsqn9, askp_rsqn10, \
-                    bidp_rsqn1, bidp_rsqn2, bidp_rsqn3, bidp_rsqn4, bidp_rsqn5, bidp_rsqn6, bidp_rsqn7, bidp_rsqn8, bidp_rsqn9, bidp_rsqn10, antc_cnpr, antc_vol = get_orderbook(code)
+                    aspr_acpt_hour, askp_rsqn1, askp_rsqn2, askp_rsqn3, askp_rsqn4, askp_rsqn5, askp_rsqn6, askp_rsqn7, askp_rsqn8, askp_rsqn9, askp_rsqn10,\
+                    bidp_rsqn1, bidp_rsqn2, bidp_rsqn3, bidp_rsqn4, bidp_rsqn5, bidp_rsqn6, bidp_rsqn7, bidp_rsqn8, bidp_rsqn9, bidp_rsqn10, antc_cnpr, antc_vol = get_orderbook(sym)
 
-                    stck_cntg_hour, stck_prpr, prdy_vrss, prdy_vrss_sign, cntg_vol, tday_rltv = get_transactions(code)
+                    stck_cntg_hour, stck_prpr, prdy_vrss, prdy_vrss_sign, cntg_vol, tday_rltv = get_transactions(sym)
 
-                    data = pd.DataFrame([askp_rsqn1, askp_rsqn2, askp_rsqn3, askp_rsqn4, askp_rsqn5, askp_rsqn6, askp_rsqn7, askp_rsqn8,\
-                         askp_rsqn9, askp_rsqn10,bidp_rsqn1, bidp_rsqn2, bidp_rsqn3, bidp_rsqn4, bidp_rsqn5, bidp_rsqn6, bidp_rsqn7, bidp_rsqn8,\
-                         bidp_rsqn9, bidp_rsqn10, antc_cnpr, antc_vol, stck_prpr, prdy_vrss, prdy_vrss_sign, cntg_vol, tday_rltv]).T
+                    data = pd.DataFrame(
+                        [askp_rsqn1, askp_rsqn2, askp_rsqn3, askp_rsqn4, askp_rsqn5, askp_rsqn6, askp_rsqn7, askp_rsqn8,
+                         askp_rsqn9, askp_rsqn10,\
+                         bidp_rsqn1, bidp_rsqn2, bidp_rsqn3, bidp_rsqn4, bidp_rsqn5, bidp_rsqn6, bidp_rsqn7, bidp_rsqn8,
+                         bidp_rsqn9, bidp_rsqn10,\
+                         antc_cnpr, antc_vol, stck_prpr, prdy_vrss, prdy_vrss_sign, cntg_vol, tday_rltv]).T
 
-                    data.columns = ['askp_rsqn1', 'askp_rsqn2', 'askp_rsqn3', 'askp_rsqn4', 'askp_rsqn5', 'askp_rsqn6', 'askp_rsqn7', 'askp_rsqn8', 'askp_rsqn9', 'askp_rsqn10',\
-                                    'bidp_rsqn1', 'bidp_rsqn2', 'bidp_rsqn3', 'bidp_rsqn4', 'bidp_rsqn5', 'bidp_rsqn6', 'bidp_rsqn7', 'bidp_rsqn8', 'bidp_rsqn9', 'bidp_rsqn10',\
-                                    'antc_cnpr', 'antc_vol', 'stck_prpr', 'prdy_vrss', 'prdy_vrss_sign', 'cntg_vol', 'tday_rltv']
+                    data.columns = ['askp_rsqn1', 'askp_rsqn2', 'askp_rsqn3', 'askp_rsqn4', 'askp_rsqn5', 'askp_rsqn6',
+                                    'askp_rsqn7', 'askp_rsqn8', 'askp_rsqn9', 'askp_rsqn10',\
+                                    'bidp_rsqn1', 'bidp_rsqn2', 'bidp_rsqn3', 'bidp_rsqn4', 'bidp_rsqn5', 'bidp_rsqn6',
+                                    'bidp_rsqn7', 'bidp_rsqn8', 'bidp_rsqn9', 'bidp_rsqn10',\
+                                    'antc_cnpr', 'antc_vol', 'stck_prpr', 'prdy_vrss', 'prdy_vrss_sign', 'cntg_vol',
+                                    'tday_rltv']
 
-                    data['time'] = datetime.now()
+                    data['time'] = datetime.datetime.now()
                     data.set_index('time', inplace=True)
 
-                    data_all = pd.concat([data_all, df], axis=1).tail(15)
-                    df = data.resample('3s').mean()  # Noise reduction
+                    data_all = pd.concat([data_all, data], axis=0).tail(18)
 
-                    askp = [c for c in df.columns if 'askp' in c]
-                    bidp = [c for c in df.columns if 'bidp' in c]
+                    print(f'data_all 크기: {len(data_all)}')
 
-                    df['tot_askp'] = df[askp].sum(axis=1)
-                    df['tot_bidp'] = df[bidp].sum(axis=1)
+                    if len(data_all) >= 18:
+                        df = data_all.resample('3s').mean()  # Noise reduction
 
-                    df['c1'] = (df['stck_prpr'] >= df['stck_prpr'].shift(1)) * (df['stck_prpr'].shift(1) >= df['stck_prpr'].shift(2)).astype('int')
-                    df['c2'] = (df['tot_askp'] > df['tot_bidp'] * 2.0) * (df['tot_askp'].shift(1) > df['tot_bidp'].shift(1) * 2.0) * (df['tot_askp'].shift(2) > df['tot_bidp'].shift(2) * 2.0).astype('int')
-                    df['c3'] = (df['tday_rltv'] > df['tday_rltv'].shift(1)) * (df['tday_rltv'].shift(1) >= df['tday_rltv'].shift(2)) * (df['tday_rltv'].shift(2) >= df['tday_rltv'].shift(3)).astype('int')
-                    df['c4'] = (df['tday_rltv'] > 110).astype('int')
+                        askp = [c for c in df.columns if 'askp' in c]
+                        bidp = [c for c in df.columns if 'bidp' in c]
 
-                    decision = df.tail(1)[['c1', 'c2', 'c3', 'c4']].product(axis=1)[0]
+                        df['tot_askp'] = df[askp].sum(axis=1)
+                        df['tot_bidp'] = df[bidp].sum(axis=1)
 
-                    if decision == 1 & volume_check == 1:  # Max: 5% 상승 가격, Min: 전날 종가
+                        df['c1'] = (df['stck_prpr'] >= df['stck_prpr'].shift(1)) * (df['stck_prpr'].shift(1) >= df['stck_prpr'].shift(2)).astype('int')
+                        df['c2'] = (df['tot_askp'] > df['tot_bidp'] * 2.0) * (df['tot_askp'].shift(1) > df['tot_bidp'].shift(1) * 2.0) * (df['tot_askp'].shift(2) > df['tot_bidp'].shift(2) * 2.0).astype('int')
+                        df['c3'] = (df['tday_rltv'] > df['tday_rltv'].shift(1)) * (df['tday_rltv'].shift(1) >= df['tday_rltv'].shift(2)) * (df['tday_rltv'].shift(2) >= df['tday_rltv'].shift(3)).astype('int')
+                        df['c4'] = (df['tday_rltv'] > 110).astype('int')
 
-                        buy_qty = int(buy_amount // current_price)
-                        if (buy_qty > 0):
+                        decision = df.tail(1)[['c1', 'c2', 'c3', 'c4']].product(axis=1)[0]
+                        print(decision, volume_check)
 
-                            print(f"{sym} 목표가 달성({target_price} < {current_price}) 매수를 시도합니다.")
-                            buy_price = float(current_price) - ho(float(current_price))
-                            print(sym, str(int(buy_qty)), str(int(buy_price)))
+                        if decision == 1 & volume_check == 1:  # Max: 5% 상승 가격, Min: 전날 종가
 
-                            result = buy(sym, str(int(buy_qty)), str(int(buy_price)))
-                            # result = buy(sym, str(int(buy_qty)), "0", "01")
-                            if result:
-                                print(f'{sym} 매수 성공')
+                            buy_qty = int(buy_amount // current_price)
+                            if (buy_qty > 0):
 
+                                print(f"{sym} 목표가 달성({target_price} < {current_price}) 매수를 시도합니다.")
+                                buy_price = float(current_price) - ho(float(current_price))
+                                print(sym, str(int(buy_qty)), str(int(buy_price)))
 
-                # 매도 코드 (지정가)
-                balance_dict = get_stock_balance()
+                                result = buy(sym, str(int(buy_qty)), str(int(buy_price)))
+                                # result = buy(sym, str(int(buy_qty)), "0", "01")
+                                if result:
+                                    print(f'{sym} 매수 성공')
 
-                for sym, qty_rt in balance_dict.items():  # qty_rt / [0]: 보유수량, [1] 주문가능 수량 [2]: rt(평가수익율)
+                        # 매도 코드 (지정가)
+                        balance_dict = get_stock_balance()
 
-                    print(f'{sym} 현재 수익율: {float(qty_rt[2]): 5.2f}')
-                    # current_price, volume_rate = get_current_price(sym)
-                    # sell_price = float(current_price) + ho(float(current_price))  # 한 호가 높여 매도 주문
+                        for sym, qty_rt in balance_dict.items():  # qty_rt / [0]: 보유수량, [1] 주문가능 수량 [2]: rt(평가수익율)
 
-                    if float(qty_rt[2]) > 1.0 or float(qty_rt[2]) < -1.0:  # 익절 라인은 dynamic 하게 바꿀 수 있다 (단위 %)
+                            print(f'{sym} 현재 수익율: {float(qty_rt[2]): 5.2f}')
+                            # current_price, volume_rate = get_current_price(sym)
+                            # sell_price = float(current_price) + ho(float(current_price))  # 한 호가 높여 매도 주문
 
-                        print(sym, str(qty_rt[1]), str(int(sell_price))) # 매도 주문 인자 정보
-                        if float(qty_rt[1])!=0:
-                            # sell(sym, str(qty_rt[1]), str(int(sell_price)), "00") # "00 지정가 매도
-                            sell(sym, str(qty_rt[1]), "0", "01") # "01 시장가 메도
+                            if float(qty_rt[2]) > 1.0 or float(qty_rt[2]) < -1.0:  # 익절 라인은 dynamic 하게 바꿀 수 있다 (단위 %)
 
+                                print(sym, str(qty_rt[1]), str(int(sell_price)))  # 매도 주문 인자 정보
+                                if float(qty_rt[1]) != 0:
+                                    # sell(sym, str(qty_rt[1]), str(int(sell_price)), "00") # "00 지정가 매도
+                                    sell(sym, str(qty_rt[1]), "0", "01")  # "01 시장가 메도
 
-            # PM 09:00 ~ PM 09:01: 관찰
-            if t_9 < t_now < t_start:
+                    # PM 09:00 ~ PM 09:01: 관찰
+                    if t_9 < t_now < t_start:
 
-                balance_dict = get_stock_balance()
-                for sym, qty_rt in balance_dict.items():
-                    sell(sym, str(qty_rt[1]), "0", "01")  # "01 전량 시장가 메도
+                        balance_dict = get_stock_balance()
+                        for sym, qty_rt in balance_dict.items():
+                            sell(sym, str(qty_rt[1]), "0", "01")  # "01 전량 시장가 메도
 
-                time.sleep(1)
-
-            # PM 03:20 ~ :프로그램 종료
-            if t_exit < t_now:
-                print("프로그램을 종료합니다.")
-                break
+                        time.sleep(1)
 
 
     except Exception as e:
         print(f"[오류 발생]{e}")
         time.sleep(1)
+
