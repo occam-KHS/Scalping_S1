@@ -4,6 +4,7 @@ import datetime
 import time
 import keyring
 import pandas as pd
+import os
 
 APP_KEY = keyring.get_password('real_app_key', 'occam123')
 APP_SECRET = keyring.get_password('real_app_secret', 'occam123')
@@ -353,6 +354,7 @@ def auto_trading():  # 매수 희망 종목 리스트
 
     data_all = pd.DataFrame()
     symbol_list = ['090410']
+
     # 자동매매 시작
     try:
 
@@ -456,7 +458,6 @@ def auto_trading():  # 매수 희망 종목 리스트
 
                         # 매도 코드 (지정가)
                         balance_dict = get_stock_balance()
-
                         for sym, qty_rt in balance_dict.items():  # qty_rt / [0]: 보유수량, [1] 주문가능 수량 [2]: rt(평가수익율)
 
                             print(f'{sym} 현재 수익율: {float(qty_rt[2]): 5.2f}')
