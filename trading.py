@@ -353,7 +353,7 @@ def auto_trading():  # 매수 희망 종목 리스트
     print("===국내 주식 자동매매 프로그램을 시작합니다===")
 
     data_all = pd.DataFrame()
-    symbol_list = ['090410']
+    symbol_list = ['039020']
 
     # 자동매매 시작
     try:
@@ -381,7 +381,7 @@ def auto_trading():  # 매수 희망 종목 리스트
                 else:
                     buy_percent = 0  # 종목당 매수 금액 비율
 
-                buy_amount = total_cash * 0.2 * buy_percent  # 종목별 주문 금액 계산
+                buy_amount = total_cash * 0.3 * buy_percent  # 종목별 주문 금액 계산
 
                 # 매수 코드
                 for sym in symbol_list:
@@ -394,7 +394,6 @@ def auto_trading():  # 매수 희망 종목 리스트
 
                     volume_check = int((volume_rate / t_progress) > 1.6)
 
-                    print(f'전일 대비 거래량 비율: {volume_rate:4.1f}')
                     print(f'종목: {sym}, 현재가: {current_price}, 거래량지표: {float(volume_rate / t_progress):5.1f}')
 
                     time.sleep(1)
@@ -441,7 +440,12 @@ def auto_trading():  # 매수 희망 종목 리스트
                         print(df.tail(1)['c1'].values[0], df.tail(1)['c2'].values[0], df.tail(1)['c3'].values[0], df.tail(1)['c4'].values[0])
                         print(decision, volume_check)
 
-                        if decision == 1 & volume_check == 1:  # Max: 5% 상승 가격, Min: 전날 종가
+                        bought_list = [] # 매수 되어 있으면 추가 매수 금지
+                        stock_dict = get_stock_balance()
+                        for sym in stock_dict.keys():
+                            bought_list.append(sym)
+
+                        if (decision == 1) & (volume_check == 1) & (sym not in bought_list):  # Max: 5% 상승 가격, Min: 전날 종가
 
                             buy_qty = int(buy_amount // current_price)
                             if (buy_qty > 0):
