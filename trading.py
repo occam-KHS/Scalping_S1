@@ -433,9 +433,9 @@ def auto_trading(target_code):  # 매수 희망 종목 리스트
                         df['tot_bidp'] = df[bidp].sum(axis=1)
 
                         df['c1'] = (df['stck_prpr'] >= df['stck_prpr'].shift(1)) * (df['stck_prpr'].shift(1) >= df['stck_prpr'].shift(2)).astype('int')
-                        df['c2'] = (df['tot_askp'] > df['tot_bidp'] * 2.0) * (df['tot_askp'].shift(1) >= df['tot_bidp'].shift(1) * 2.0) * (df['tot_askp'].shift(2) > df['tot_bidp'].shift(2) * 1.5).astype('int')
+                        df['c2'] = (df['tot_askp'] > df['tot_bidp'] * 2.0) * (df['tot_askp'].shift(1) >= df['tot_bidp'].shift(1) * 2.0) * (df['tot_askp'].shift(2) > df['tot_bidp'].shift(2) * 2.0).astype('int')
                         df['c3'] = (df['tday_rltv'] > df['tday_rltv'].shift(1)) * (df['tday_rltv'].shift(1) >= df['tday_rltv'].shift(2)) * (df['tday_rltv'].shift(2) >= df['tday_rltv'].shift(3)).astype('int')
-                        df['c4'] = (df['tday_rltv'] > 110).astype('int')
+                        df['c4'] = (df['tday_rltv'] > 120).astype('int')
 
                         decision = df.tail(1)[['c1', 'c2', 'c3', 'c4']].product(axis=1)[0]
                         print(df.tail(1)['c1'].values[0], df.tail(1)['c2'].values[0], df.tail(1)['c3'].values[0], df.tail(1)['c4'].values[0])
@@ -452,8 +452,8 @@ def auto_trading(target_code):  # 매수 희망 종목 리스트
                             if (buy_qty > 0):
 
                                 print(f"{sym} 매수를 시도합니다.")
-                                # buy_price = float(current_price) - ho(float(current_price))
-                                buy_price = float(current_price)
+                                buy_price = float(current_price) - ho(float(current_price))
+                                # buy_price = float(current_price)
                                 print(sym, str(int(buy_qty)), str(int(buy_price)))
 
                                 result = buy(sym, str(int(buy_qty)), str(int(buy_price)))

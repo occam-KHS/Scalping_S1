@@ -2,4 +2,4 @@ import trading
 
 if __name__ == '__main__':
 
-    trading.auto_trading('xxxx')
+    trading.auto_trading('332570')
