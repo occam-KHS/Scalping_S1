@@ -349,11 +349,11 @@ def ho(x):
         return 1
 
 
-def auto_trading():  # 매수 희망 종목 리스트
+def auto_trading(target_code):  # 매수 희망 종목 리스트
     print("===국내 주식 자동매매 프로그램을 시작합니다===")
 
     data_all = pd.DataFrame()
-    symbol_list = ['039020']
+    symbol_list = [target_code]
 
     # 자동매매 시작
     try:
@@ -423,6 +423,7 @@ def auto_trading():  # 매수 희망 종목 리스트
                     data_all = pd.concat([data_all, data], axis=0).tail(18)
 
                     if len(data_all) >= 18:
+
                         df = data_all.resample('3s').mean()  # Noise reduction
 
                         askp = [c for c in df.columns if 'askp' in c]
@@ -432,7 +433,7 @@ def auto_trading():  # 매수 희망 종목 리스트
                         df['tot_bidp'] = df[bidp].sum(axis=1)
 
                         df['c1'] = (df['stck_prpr'] >= df['stck_prpr'].shift(1)) * (df['stck_prpr'].shift(1) >= df['stck_prpr'].shift(2)).astype('int')
-                        df['c2'] = (df['tot_askp'] > df['tot_bidp'] * 2.0) * (df['tot_askp'].shift(1) > df['tot_bidp'].shift(1) * 2.0) * (df['tot_askp'].shift(2) > df['tot_bidp'].shift(2) * 2.0).astype('int')
+                        df['c2'] = (df['tot_askp'] > df['tot_bidp'] * 2.0) * (df['tot_askp'].shift(1) >= df['tot_bidp'].shift(1) * 2.0) * (df['tot_askp'].shift(2) > df['tot_bidp'].shift(2) * 1.5).astype('int')
                         df['c3'] = (df['tday_rltv'] > df['tday_rltv'].shift(1)) * (df['tday_rltv'].shift(1) >= df['tday_rltv'].shift(2)) * (df['tday_rltv'].shift(2) >= df['tday_rltv'].shift(3)).astype('int')
                         df['c4'] = (df['tday_rltv'] > 110).astype('int')
 
